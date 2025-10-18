@@ -10,7 +10,7 @@ const ismlar = [
 ];
 
 function randomPul() {
-  return Math.floor(Math.random() * (2500000 - 30000 + 1) + 30000);
+  return Math.floor(Math.random() * (250000 - 30000 + 1) + 30000);
 }
 
 function yangiDaromad() {
@@ -26,7 +26,7 @@ function yangiDaromad() {
 }
 
 // Dastlab 10 ta yozuv chiqsin
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 20; i++) {
   yangiDaromad();
 }
 

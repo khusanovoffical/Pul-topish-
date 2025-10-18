@@ -1,120 +1,120 @@
 /* --- Asosiy umumiy style --- */
 body {
-  font-family: "Poppins", sans-serif;
-  margin: 0;
-  padding: 0;
-  background: linear-gradient(135deg, #000428, #004e92);
-  color: #eaf6ff;
-  overflow-x: hidden;
-}
-
-/* --- Header qismi --- */
-header {
-  text-align: center;
-  padding: 40px 10px;
-  background: rgba(0, 0, 0, 0.4);
-  border-bottom: 2px solid rgba(0, 255, 255, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
-}
-
-h1 {
-  font-size: 28px;
-  color: #00ffff;
-  text-shadow: 0 0 10px #00e5ff;
-}
-
-p {
-  max-width: 600px;
-  margin: 10px auto;
-  line-height: 1.6;
-  font-size: 15px;
-}
-
-/* --- Narx qismi --- */
-.price-box {
-  margin-top: 15px;
-}
-
-.old-price {
-  text-decoration: line-through;
-  color: #888;
-}
-
-.new-price {
-  font-size: 22px;
-  font-weight: bold;
-  color: #00ffcc;
-  text-shadow: 0 0 10px #00ffaa;
-}
-
-/* --- Telegram tugmasi --- */
-.telegram-btn {
-  display: inline-block;
-  background: #00c6ff;
-  color: #fff;
-  padding: 12px 25px;
-  border-radius: 30px;
-  text-decoration: none;
-  font-weight: bold;
-  box-shadow: 0 0 15px #00c6ff;
-  transition: 0.3s;
-}
-
-.telegram-btn:hover {
-  background: #00a2ff;
-  box-shadow: 0 0 25px #00e5ff;
-}
-
-/* --- Daromad qismi --- */
-.daromad {
-  text-align: center;
-  margin-top: 40px;
-}
-
-.daromad h2 {
-  font-size: 22px;
-  color: #00ffff;
-  text-shadow: 0 0 10px #00e5ff;
-  margin-bottom: 10px;
-}
-
-.daromad-container {
-  width: 90%;
-  max-width: 400px;
-  height: 220px;
-  margin: 20px auto;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
-  position: relative;
-}
-
-/* --- Harakatlanadigan ro‘yxat --- */
-#daromadList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  animation: scrollUp 25s linear infinite;
-}
-
-#daromadList li {
-  padding: 10px 15px;
-  font-size: 15px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #baf8ff;
-  text-shadow: 0 0 6px #00ffff;
-}
-
-/* --- Silliq yuqoriga chiqish animatsiyasi --- */
-@keyframes scrollUp {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-50%); }
-}
-
-/* Responsivlik */
-@media (max-width: 500px) {
-  h1 { font-size: 22px; }
-  .new-price { font-size: 18px; }
-}
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #000428, #004e92);
+    color: #eaf6ff;
+    overflow-x: hidden;
+  }
+  
+  /* --- Header qismi --- */
+  header {
+    text-align: center;
+    padding: 40px 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border-bottom: 2px solid rgba(0, 255, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+  }
+  
+  h1 {
+    font-size: 28px;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00e5ff;
+  }
+  
+  p {
+    max-width: 600px;
+    margin: 10px auto;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  
+  /* --- Narx qismi --- */
+  .price-box {
+    margin-top: 15px;
+  }
+  
+  .old-price {
+    text-decoration: line-through;
+    color: #888;
+  }
+  
+  .new-price {
+    font-size: 22px;
+    font-weight: bold;
+    color: #00ffcc;
+    text-shadow: 0 0 10px #00ffaa;
+  }
+  
+  /* --- Telegram tugmasi --- */
+  .telegram-btn {
+    display: inline-block;
+    background: #00c6ff;
+    color: #fff;
+    padding: 12px 25px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: bold;
+    box-shadow: 0 0 15px #00c6ff;
+    transition: 0.3s;
+  }
+  
+  .telegram-btn:hover {
+    background: #00a2ff;
+    box-shadow: 0 0 25px #00e5ff;
+  }
+  
+  /* --- Daromad qismi --- */
+  .daromad {
+    text-align: center;
+    margin-top: 40px;
+  }
+  
+  .daromad h2 {
+    font-size: 22px;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00e5ff;
+    margin-bottom: 10px;
+  }
+  
+  .daromad-container {
+    width: 90%;
+    max-width: 400px;
+    height: 220px;
+    margin: 20px auto;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+    position: relative;
+  }
+  
+  /* --- Harakatlanadigan ro‘yxat --- */
+  #daromadList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    animation: scrollUp 25s linear infinite;
+  }
+  
+  #daromadList li {
+    padding: 10px 15px;
+    font-size: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #baf8ff;
+    text-shadow: 0 0 6px #00ffff;
+  }
+  
+  /* --- Silliq yuqoriga chiqish animatsiyasi --- */
+  @keyframes scrollUp {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+  
+  /* Responsivlik */
+  @media (max-width: 500px) {
+    h1 { font-size: 22px; }
+    .new-price { font-size: 18px; }
+  }
