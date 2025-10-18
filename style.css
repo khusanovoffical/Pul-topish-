@@ -117,4 +117,5 @@ body {
   @media (max-width: 500px) {
     h1 { font-size: 22px; }
     .new-price { font-size: 18px; }
+
   }
