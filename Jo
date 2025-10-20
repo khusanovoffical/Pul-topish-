@@ -1,0 +1,313 @@
+# bot_pay.py
+# Python 3, aiogram — InstaBozor bot (to'lov chek -> admin tasdiqlash)
+# Kerakli kutubxona: pip install aiogram
+
+import os
+import json
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
+from aiogram.types import ParseMode
+
+logging.basicConfig(level=logging.INFO)
+
+# ------------------ KONFIGURATSIYA (SIZ TOMONINGIZDAN BERILGAN) ------------------
+BOT_TOKEN = "8496235164:AAFiGPabX2CN2BvjJ3XTdHHTMj88SBDVh04"
+ADMIN_ID = str(7205796796)
+
+# To'lov karta ma'lumotlari (foydalanuvchiga ko'rsatiladi)
+PAYMENT_INFO = {
+    "bank_name": "HAMKOR BANK",
+    "card_number": "8600 3329 2958 1290",   # SIZ BERGAN KARTA
+    "account_name": "J/g",
+    "note": "To‘lovni amalga oshiring va chekni botga yuboring. So‘mda."
+}
+# -------------------------------------------------------------------------------
+
+# FILES
+BASE_DIR = os.path.dirname(__file__)
+LISTINGS_FILE = os.path.join(BASE_DIR, 'listings.json')
+PAYMENTS_FILE = os.path.join(BASE_DIR, 'payments.json')
+
+# ---------- Helper: JSON load/save ----------
+def load_json(path, default):
+    try:
+        if not os.path.exists(path):
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(default, f, ensure_ascii=False, indent=2)
+            return default
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logging.exception("load_json error")
+        return default
+
+def save_json(path, data):
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# Ensure files exist
+listings = load_json(LISTINGS_FILE, [])
+payments = load_json(PAYMENTS_FILE, [])
+
+# ---------- Bot init ----------
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(bot)
+
+# ---------- Helpers ----------
+def find_listing(listing_id):
+    for l in listings:
+        if str(l.get('id')) == str(listing_id):
+            return l
+    return None
+
+def next_payment_id():
+    if not payments:
+        return 1
+    return max((p.get('pay_id', 0) for p in payments), default=0) + 1
+
+# ---------- Commands ----------
+@dp.message_handler(commands=['start','help'])
+async def cmd_start(message: types.Message):
+    txt = (
+        "Assalomu alaykum! InstaBozor botiga xush kelibsiz.\n\n"
+        "Komandalar:\n"
+        "/listings — bozor (tasdiqlanganlar)\n"
+        "/buy <id> — ushbu listingni sotib olish (to‘lov ma'lumotlari)\n"
+        "/mylist — mening e'lonlarim\n\n"
+        "To‘lovni amalga oshirgach, chek (skrinshot)ni shu botga yuboring va:\n"
+        "1) rasmga caption qilib /paydone <listing_id> yozing, yoki\n"
+        "2) rasm yuboring, so‘ng /paydone <listing_id> yozing.\n\n"
+        "Adminlar uchun: /payments, /approve_payment <payId>, /reject_payment <payId>"
+    )
+    await message.reply(txt)
+
+# ---------- Show approved listings ----------
+@dp.message_handler(commands=['listings'])
+async def cmd_listings(message: types.Message):
+    approved = [l for l in listings if l.get('approved')]
+    if not approved:
+        await message.reply("Bozor hozircha bo‘sh.")
+        return
+    for l in approved:
+        text = f"ID: {l['id']}\n@{l['nickname']}\n👥 {l.get('followers',0)}\n💰 {int(l.get('price',0)):,} so'm"
+        imgs = l.get('images', [])
+        if imgs:
+            first = imgs[0]
+            try:
+                # if stored file_id dict
+                if isinstance(first, dict) and first.get('file_id'):
+                    await bot.send_photo(message.chat.id, first['file_id'], caption=text, parse_mode=ParseMode.HTML)
+                else:
+                    await bot.send_photo(message.chat.id, first, caption=text, parse_mode=ParseMode.HTML)
+            except Exception:
+                await message.reply(text)
+        else:
+            await message.reply(text)
+
+# ---------- Buy: show payment info ----------
+@dp.message_handler(commands=['buy'])
+async def cmd_buy(message: types.Message):
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.reply("ID bilan buyruq: /buy <listing_id>\nMasalan: /buy 1623456789")
+        return
+    lid = parts[1]
+    l = find_listing(lid)
+    if not l or not l.get('approved'):
+        await message.reply("Bunday tasdiqlangan listing topilmadi.")
+        return
+    info = PAYMENT_INFO
+    text = (
+        f"📌 To‘lov ma'lumotlari:\n\n"
+        f"Bank: {info['bank_name']}\n"
+        f"Karta raqami: <b>{info['card_number']}</b>\n"
+        f"O‘tkazma nomi: {info['account_name']}\n\n"
+        f"To‘lov summasi: <b>{int(l['price']):,} so'm</b>\n\n"
+        "To‘lovni amalga oshirgach, chek (skrinshot)ni shu botga yuboring va /paydone "
+        f"{l['id']} yozing. Keyin admin tekshiradi va tasdiqlaydi."
+    )
+    await message.reply(text, parse_mode=ParseMode.HTML)
+
+# ---------- Receive photos and /paydone ----------
+last_photo_by_user = {}
+
+@dp.message_handler(content_types=types.ContentType.PHOTO)
+async def handle_photo(message: types.Message):
+    cap = (message.caption or "").strip()
+    # If caption contains /paydone
+    if cap.startswith('/paydone'):
+        parts = cap.split()
+        if len(parts) < 2:
+            await message.reply("Iltimos: captionda yoki alohida xabarda /paydone <listing_id> yozing.")
+            return
+        lid = parts[1]
+        l = find_listing(lid)
+        if not l:
+            await message.reply("Bunday listing topilmadi.")
+            return
+        file_id = message.photo[-1].file_id
+        pay_id = next_payment_id()
+        pay = {
+            "pay_id": pay_id,
+            "listing_id": l['id'],
+            "listing_nick": l['nickname'],
+            "amount": l['price'],
+            "buyer_id": str(message.from_user.id),
+            "buyer_name": message.from_user.username or message.from_user.full_name,
+            "receipt": {"file_id": file_id},
+            "status": "pending",
+            "created_at": int(message.date.timestamp())
+        }
+        payments.append(pay)
+        save_json(PAYMENTS_FILE, payments)
+        await message.reply(f"✅ Chek qabul qilindi. Payment ID: {pay_id}. Admin tasdiqlashini kuting.")
+        # notify admin
+        admin_text = (
+            f"🔔 Yangi to‘lov arizasi #{pay_id}\n"
+            f"Listing: @{l['nickname']} (ID {l['id']})\n"
+            f"Summa: {int(l['price']):,} so'm\n"
+            f"Xaridor: @{pay['buyer_name']} (ID {pay['buyer_id']})\n\n"
+            f"Tasdiqlash: /approve_payment {pay_id}\n"
+            f"Rad etish: /reject_payment {pay_id}"
+        )
+        try:
+            await bot.send_message(ADMIN_ID, admin_text)
+            await bot.send_photo(ADMIN_ID, file_id, caption=f"Chek uchun payment #{pay_id}")
+        except Exception:
+            logging.exception("Adminga yuborishda xatolik")
+        return
+
+    # Otherwise save last photo for user (they may send /paydone later)
+    file_id = message.photo[-1].file_id
+    last_photo_by_user[str(message.from_user.id)] = file_id
+    await message.reply("Rasm saqlandi. Agar bu chek bo'lsa, keyin /paydone <listing_id> yozing yoki rasmga captionda /paydone <id> yozing.")
+
+@dp.message_handler(commands=['paydone'])
+async def cmd_paydone(message: types.Message):
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.reply("Foydalanish: /paydone <listing_id>\nAvval rasmni yuboring yoki rasmga captionda /paydone yozing.")
+        return
+    lid = parts[1]
+    l = find_listing(lid)
+    if not l:
+        await message.reply("Listing topilmadi.")
+        return
+    file_id = last_photo_by_user.get(str(message.from_user.id))
+    if not file_id:
+        await message.reply("Avval chekni rasm sifatida yuboring yoki rasmga captionda /paydone <id> yozing.")
+        return
+    pay_id = next_payment_id()
+    pay = {
+        "pay_id": pay_id,
+        "listing_id": l['id'],
+        "listing_nick": l['nickname'],
+        "amount": l['price'],
+        "buyer_id": str(message.from_user.id),
+        "buyer_name": message.from_user.username or message.from_user.full_name,
+        "receipt": {"file_id": file_id},
+        "status": "pending",
+        "created_at": int(message.date.timestamp())
+    }
+    payments.append(pay)
+    save_json(PAYMENTS_FILE, payments)
+    await message.reply(f"✅ Chek qabul qilindi. Payment ID: {pay_id}. Admin tasdiqlashini kuting.")
+    admin_text = (
+        f"🔔 Yangi to‘lov arizasi #{pay_id}\n"
+        f"Listing: @{l['nickname']} (ID {l['id']})\n"
+        f"Summa: {int(l['price']):,} so'm\n"
+        f"Xaridor: @{pay['buyer_name']} (ID {pay['buyer_id']})\n\n"
+        f"Tasdiqlash: /approve_payment {pay_id}\n"
+        f"Rad etish: /reject_payment {pay_id}"
+    )
+    try:
+        await bot.send_message(ADMIN_ID, admin_text)
+        await bot.send_photo(ADMIN_ID, file_id, caption=f"Chek uchun payment #{pay_id}")
+    except Exception:
+        logging.exception("Adminga yuborishda xatolik")
+
+# ---------- ADMIN: approve/reject payments ----------
+@dp.message_handler(commands=['approve_payment'])
+async def cmd_approve_payment(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID:
+        await message.reply("Bu buyruq faqat admin uchun.")
+        return
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.reply("Foydalanish: /approve_payment <payId>")
+        return
+    try:
+        payid = int(parts[1])
+    except:
+        await message.reply("To'g'ri payment ID kiriting.")
+        return
+    for p in payments:
+        if p.get('pay_id') == payid:
+            p['status'] = 'approved'
+            save_json(PAYMENTS_FILE, payments)
+            buyer = p.get('buyer_id')
+            listing = find_listing(p['listing_id'])
+            seller_id = listing.get('sellerId') if listing else None
+            try:
+                await bot.send_message(buyer, f"Sizning to‘lovingiz #{payid} tasdiqlandi. Sotuvchi bilan bog‘laning.")
+            except: pass
+            try:
+                if seller_id:
+                    await bot.send_message(seller_id, f"Sotuvchingiz uchun to‘lov #{payid} tasdiqlandi. Xaridor: @{p['buyer_name']}")
+            except: pass
+            await message.reply(f"Payment #{payid} tasdiqlandi.")
+            return
+    await message.reply("Bunday payment topilmadi.")
+
+@dp.message_handler(commands=['reject_payment'])
+async def cmd_reject_payment(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID:
+        await message.reply("Bu buyruq faqat admin uchun.")
+        return
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.reply("Foydalanish: /reject_payment <payId>")
+        return
+    try:
+        payid = int(parts[1])
+    except:
+        await message.reply("To'g'ri payment ID kiriting.")
+        return
+    for idx,p in enumerate(payments):
+        if p.get('pay_id') == payid:
+            p['status'] = 'rejected'
+            save_json(PAYMENTS_FILE, payments)
+            try:
+                await bot.send_message(p.get('buyer_id'), f"Sizning to‘lovingiz #{payid} rad etildi. Iltimos chekni tekshirib qayta yuboring yoki admin bilan bog‘laning.")
+            except: pass
+            await message.reply(f"Payment #{payid} rad etildi va xaridorga xabar yuborildi.")
+            return
+    await message.reply("Bunday payment topilmadi.")
+
+# ---------- ADMIN: list payments ----------
+@dp.message_handler(commands=['payments'])
+async def cmd_payments(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID:
+        await message.reply("Bu buyruq faqat admin uchun.")
+        return
+    if not payments:
+        await message.reply("To'lovlar yo‘q.")
+        return
+    txt = "So'ngi to'lovlar:\n"
+    for p in payments[-30:]:
+        txt += f"#{p['pay_id']} - {p['listing_nick']} - {int(p['amount']):,} so'm - {p['status']}\n"
+    await message.reply(txt)
+
+# ---------- fallback ----------
+@dp.message_handler()
+async def fallback(message: types.Message):
+    await message.reply("Noma'lum buyruq. /help ni bosing.")
+
+# ---------- run ----------
+if __name__ == '__main__':
+    # reload files
+    listings = load_json(LISTINGS_FILE, [])
+    payments = load_json(PAYMENTS_FILE, [])
+    logging.info("Bot ishga tushmoqda...")
+    executor.start_polling(dp, skip_updates=True)
